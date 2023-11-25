@@ -20,9 +20,7 @@ type StorageRepository interface {
 	Objects(storeName string, maxObjectsPerPage uint, requestedPage uint, prefix string) []StorageObject
 	ObjectsWithMetadata(storeName string, maxObjectsPerPage uint, requestedPage uint, prefix string) []StorageObject
 	GetObject(params ObjectParams) StorageObject
-	Upload(params ObjectParams, file *os.File) StorageObject
-	UploadWithMetadata(params ObjectParams, metadata map[string]string, file *os.File) StorageObject
-	UploadAsByteArray(params ObjectParams, metadata map[string]string, file []byte, size uint, mimeType string) StorageObject
+	Upload(params ObjectParams, metadata map[string]string, file *os.File) StorageObject
 	PresignUploadLink(params ObjectParams, mimeType string, metadata map[string]string, duration uint) url.URL
 	Download(params ObjectParams) DownloadFileResponse
 	PresignDownloadLink(params ObjectParams) url.URL

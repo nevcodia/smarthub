@@ -37,17 +37,7 @@ func (s *s3Repository) GetObject(params domain.ObjectParams) domain.StorageObjec
 	panic("implement me")
 }
 
-func (s *s3Repository) Upload(params domain.ObjectParams, file *os.File) domain.StorageObject {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *s3Repository) UploadWithMetadata(params domain.ObjectParams, metadata map[string]string, file *os.File) domain.StorageObject {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *s3Repository) UploadAsByteArray(params domain.ObjectParams, metadata map[string]string, file []byte, size uint, mimeType string) domain.StorageObject {
+func (s *s3Repository) Upload(params domain.ObjectParams, metadata map[string]string, file *os.File) domain.StorageObject {
 	//TODO implement me
 	panic("implement me")
 }

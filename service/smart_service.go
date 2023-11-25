@@ -11,9 +11,7 @@ type SmartService interface {
 	Objects(storeType domain.StorageType, storeName string, maxObjectsPerPage uint, requestedPage uint, prefix string) []domain.StorageObject
 	ObjectsWithMetadata(storeType domain.StorageType, storeName string, maxObjectsPerPage uint, requestedPage uint, prefix string) []domain.StorageObject
 	GetObject(storeType domain.StorageType, params domain.ObjectParams) domain.StorageObject
-	Upload(storeType domain.StorageType, params domain.ObjectParams, file *os.File) domain.StorageObject
-	UploadWithMetadata(storeType domain.StorageType, params domain.ObjectParams, metadata map[string]string, file *os.File) domain.StorageObject
-	UploadAsByteArray(storeType domain.StorageType, params domain.ObjectParams, metadata map[string]string, file []byte, size uint, mimeType string) domain.StorageObject
+	Upload(storeType domain.StorageType, params domain.ObjectParams, metadata map[string]string, file *os.File) domain.StorageObject
 	PresignUploadLink(storeType domain.StorageType, params domain.ObjectParams, mimeType string, metadata map[string]string, duration uint) url.URL
 	Download(storeType domain.StorageType, params domain.ObjectParams) domain.DownloadFileResponse
 	PresignDownloadLink(storeType domain.StorageType, params domain.ObjectParams) url.URL
@@ -55,17 +53,7 @@ func (s smartService) GetObject(storeType domain.StorageType, params domain.Obje
 	panic("implement me")
 }
 
-func (s smartService) Upload(storeType domain.StorageType, params domain.ObjectParams, file *os.File) domain.StorageObject {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s smartService) UploadWithMetadata(storeType domain.StorageType, params domain.ObjectParams, metadata map[string]string, file *os.File) domain.StorageObject {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s smartService) UploadAsByteArray(storeType domain.StorageType, params domain.ObjectParams, metadata map[string]string, file []byte, size uint, mimeType string) domain.StorageObject {
+func (s smartService) Upload(storeType domain.StorageType, params domain.ObjectParams, metadata map[string]string, file *os.File) domain.StorageObject {
 	//TODO implement me
 	panic("implement me")
 }
