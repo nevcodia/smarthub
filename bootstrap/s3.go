@@ -10,7 +10,12 @@ import (
 )
 
 func NewS3Client(env *Env) *s3.Client {
+	region := env.S3Region
+	if region == "" {
+		region = "aws-global"
+	}
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(region),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(env.S3AccessKey, env.S3SecretKey, "")),
 	)
 	if err != nil {

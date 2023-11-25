@@ -12,6 +12,7 @@ type Env struct {
 	S3HostAddr  string `mapstructure:"S3_HOST_ADDR"`
 	S3AccessKey string `mapstructure:"S3_ACCESS_KEY"`
 	S3SecretKey string `mapstructure:"S3_SECRET_KEY"`
+	S3Region    string `mapstructure:"S3_REGION"`
 }
 
 func NewEnv() *Env {

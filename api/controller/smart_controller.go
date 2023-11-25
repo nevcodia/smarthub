@@ -2,7 +2,9 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/nevcodia/smarthub/domain"
 	"github.com/nevcodia/smarthub/service"
+	"net/http"
 )
 
 type SmartController interface {
@@ -34,13 +36,22 @@ func NewSmartController(service service.SmartService) SmartController {
 }
 
 func (s *smartController) StorageTypes(ctx *gin.Context) {
-	//TODO implement me
-	panic("implement me")
+	types := []string{
+		domain.S3.String(),
+		//string(domain.FTP),
+		//string(domain.SHAREPOINT),
+	}
+	ctx.JSON(http.StatusOK, types)
 }
 
 func (s *smartController) StoreNames(ctx *gin.Context) {
-	//TODO implement me
-	panic("implement me")
+	sType := ctx.Param("type")
+	storeNames, err := s.service.StoreNames(domain.StorageTypeFromValue(sType))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+	} else {
+		ctx.JSON(http.StatusOK, storeNames)
+	}
 }
 
 func (s *smartController) Objects(ctx *gin.Context) {

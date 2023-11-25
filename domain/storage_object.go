@@ -16,18 +16,18 @@ type StorageObject struct {
 }
 
 type StorageRepository interface {
-	StoreNames() []string
-	Objects(storeName string, maxObjectsPerPage uint, requestedPage uint, prefix string) []StorageObject
-	ObjectsWithMetadata(storeName string, maxObjectsPerPage uint, requestedPage uint, prefix string) []StorageObject
-	GetObject(params ObjectParams) StorageObject
-	Upload(params ObjectParams, metadata map[string]string, file *os.File) StorageObject
-	PresignUploadLink(params ObjectParams, mimeType string, metadata map[string]string, duration uint) url.URL
-	Download(params ObjectParams) DownloadFileResponse
-	PresignDownloadLink(params ObjectParams) url.URL
-	PresignDownloadLinkWithDuration(params ObjectParams, duration uint) url.URL
-	DeleteAll(storeName string, pathPrefix string) bool
-	Delete(params ObjectParams) bool
-	Copy(current ObjectParams, destination ObjectParams) StorageObject
-	CopyAll(sourceStoreName string, sourcePath string, targetStoreName string, targetPath string) []StorageObject
-	Move(current ObjectParams, destination ObjectParams) StorageObject
+	StoreNames() ([]string, error)
+	Objects(storeName string, maxObjectsPerPage uint, requestedPage uint, prefix string) ([]StorageObject, error)
+	ObjectsWithMetadata(storeName string, maxObjectsPerPage uint, requestedPage uint, prefix string) ([]StorageObject, error)
+	GetObject(params ObjectParams) (StorageObject, error)
+	Upload(params ObjectParams, metadata map[string]string, file *os.File) (StorageObject, error)
+	PresignUploadLink(params ObjectParams, mimeType string, metadata map[string]string, duration uint) (url.URL, error)
+	Download(params ObjectParams) (DownloadFileResponse, error)
+	PresignDownloadLink(params ObjectParams) (url.URL, error)
+	PresignDownloadLinkWithDuration(params ObjectParams, duration uint) (url.URL, error)
+	DeleteAll(storeName string, pathPrefix string) (bool, error)
+	Delete(params ObjectParams) (bool, error)
+	Copy(current ObjectParams, destination ObjectParams) (StorageObject, error)
+	CopyAll(sourceStoreName string, sourcePath string, targetStoreName string, targetPath string) ([]StorageObject, error)
+	Move(current ObjectParams, destination ObjectParams) (StorageObject, error)
 }
