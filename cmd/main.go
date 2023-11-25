@@ -20,12 +20,11 @@ func main() {
 
 	env := app.Env
 
-	db := app.DB
-	defer app.CloseDBConnection()
+	s3Client := app.S3
 
 	server := gin.New()
 	server.Use(gin.Recovery(), middleware.Logger())
-	route.Setup(env, db, server)
+	route.Setup(env, s3Client, server)
 
 	var serverAddress string
 	if env.Host != "" {

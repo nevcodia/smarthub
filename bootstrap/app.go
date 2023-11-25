@@ -1,19 +1,17 @@
 package bootstrap
 
-import "gorm.io/gorm"
+import (
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+)
 
 type Application struct {
 	Env *Env
-	DB  *gorm.DB
+	S3  *s3.Client
 }
 
 func App() Application {
 	app := &Application{}
 	app.Env = NewEnv()
-	app.DB = NewSQLiteDatabase(app.Env)
+	app.S3 = NewS3Client(app.Env)
 	return *app
-}
-
-func (app *Application) CloseDBConnection() {
-	CloseSQLiteDBConnection(app.DB)
 }

@@ -6,14 +6,12 @@ import (
 )
 
 type Env struct {
-	AppEnv string `mapstructure:"APP_ENV"`
-	Host   string `mapstructure:"HOST"`
-	Port   string `mapstructure:"PORT"`
-	DBHost string `mapstructure:"DB_HOST"`
-	DBPort string `mapstructure:"DB_PORT"`
-	DBUser string `mapstructure:"DB_USER"`
-	DBPass string `mapstructure:"DB_PASS"`
-	DBName string `mapstructure:"DB_NAME"`
+	AppEnv      string `mapstructure:"APP_ENV"`
+	Host        string `mapstructure:"HOST"`
+	Port        string `mapstructure:"PORT"`
+	S3HostAddr  string `mapstructure:"S3_HOST_ADDR"`
+	S3AccessKey string `mapstructure:"S3_ACCESS_KEY"`
+	S3SecretKey string `mapstructure:"S3_SECRET_KEY"`
 }
 
 func NewEnv() *Env {
