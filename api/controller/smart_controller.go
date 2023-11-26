@@ -5,6 +5,7 @@ import (
 	"github.com/nevcodia/smarthub/domain"
 	"github.com/nevcodia/smarthub/service"
 	"net/http"
+	"strconv"
 )
 
 type SmartController interface {
@@ -45,8 +46,8 @@ func (s *smartController) StorageTypes(ctx *gin.Context) {
 }
 
 func (s *smartController) StoreNames(ctx *gin.Context) {
-	sType := ctx.Param("type")
-	storeNames, err := s.service.StoreNames(domain.StorageTypeFromValue(sType))
+	storageType := s.ExtractStorageType(ctx)
+	storeNames, err := s.service.StoreNames(storageType)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
 	} else {
@@ -55,23 +56,88 @@ func (s *smartController) StoreNames(ctx *gin.Context) {
 }
 
 func (s *smartController) Objects(ctx *gin.Context) {
-	//TODO implement me
-	panic("implement me")
+	storageType := s.ExtractStorageType(ctx)
+	storeName := ctx.Query("storeName")
+	maxObjectPerPage := ctx.DefaultQuery("maxObjectPerPage", "1000")
+	maxKeys, err := strconv.ParseInt(maxObjectPerPage, 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	page := ctx.DefaultQuery("page", "0")
+	currentPage, err := strconv.ParseInt(page, 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	prefix := ctx.Query("prefix")
+	objects, err := s.service.Objects(storageType, storeName, int32(maxKeys), int32(currentPage), prefix)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, objects)
 }
 
 func (s *smartController) ObjectsWithMetadata(ctx *gin.Context) {
-	//TODO implement me
-	panic("implement me")
+	storageType := s.ExtractStorageType(ctx)
+	storeName := ctx.Query("storeName")
+	maxObjectPerPage := ctx.DefaultQuery("maxObjectPerPage", "1000")
+	maxKeys, err := strconv.ParseInt(maxObjectPerPage, 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	page := ctx.DefaultQuery("page", "0")
+	currentPage, err := strconv.ParseInt(page, 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	prefix := ctx.Query("prefix")
+	objects, err := s.service.ObjectsWithMetadata(storageType, storeName, int32(maxKeys), int32(currentPage), prefix)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, objects)
 }
 
 func (s *smartController) GetObject(ctx *gin.Context) {
-	//TODO implement me
-	panic("implement me")
+	storageType := s.ExtractStorageType(ctx)
+	storeName := ctx.Query("storeName")
+	key := ctx.Query("key")
+	params := &domain.ObjectParams{
+		StoreName: storeName,
+		Key:       key,
+	}
+	objects, err := s.service.GetObject(storageType, params)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, objects)
 }
 
 func (s *smartController) Upload(ctx *gin.Context) {
-	//TODO implement me
-	panic("implement me")
+	storageType := s.ExtractStorageType(ctx)
+	file, err := ctx.FormFile("file")
+	storeName := ctx.Request.PostFormValue("storeName")
+	key := ctx.Request.PostFormValue("key")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	params := &domain.ObjectParams{
+		StoreName: storeName,
+		Key:       key,
+	}
+	response, err := s.service.UploadMultiPart(storageType, params, map[string]string{}, file)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, response)
 }
 
 func (s *smartController) PresignUploadLink(ctx *gin.Context) {
@@ -117,4 +183,9 @@ func (s *smartController) CopyAll(ctx *gin.Context) {
 func (s *smartController) Move(ctx *gin.Context) {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (s *smartController) ExtractStorageType(ctx *gin.Context) domain.StorageType {
+	sType := ctx.Param("type")
+	return domain.StorageTypeFromValue(sType)
 }

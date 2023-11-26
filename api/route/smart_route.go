@@ -14,12 +14,12 @@ func NewSmartRouter(client *s3.Client, group *gin.RouterGroup) {
 	reps := map[domain.StorageType]domain.StorageRepository{
 		domain.S3: s3Repository,
 	}
-	smartController := controller.NewSmartController(service.NewSmartService(&reps))
+	smartController := controller.NewSmartController(service.NewSmartService(reps))
 
 	group.GET("/support", smartController.StorageTypes)
 	group.GET("/:type/stores", smartController.StoreNames)
 	group.GET("/:type/objects", smartController.Objects)
-	group.GET("/:type/objects/detail", smartController.ObjectsWithMetadata)
+	group.GET("/:type/objects/metadata", smartController.ObjectsWithMetadata)
 	group.GET("/:type/object", smartController.GetObject)
 	group.DELETE("/:type/object", smartController.Delete)
 	group.DELETE("/:type/object/all", smartController.DeleteAll)

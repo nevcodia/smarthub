@@ -23,6 +23,7 @@ func NewS3Client(env *Env) *s3.Client {
 	}
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.BaseEndpoint = aws.String(env.S3HostAddr)
+		o.UsePathStyle = true
 	})
 
 	return client
