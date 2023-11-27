@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/nevcodia/smarthub/domain"
 	"github.com/nevcodia/smarthub/service"
@@ -18,7 +19,6 @@ type SmartController interface {
 	PresignUploadLink(ctx *gin.Context)
 	Download(ctx *gin.Context)
 	PresignDownloadLink(ctx *gin.Context)
-	PresignDownloadLinkWithDuration(ctx *gin.Context)
 	DeleteAll(ctx *gin.Context)
 	Delete(ctx *gin.Context)
 	Copy(ctx *gin.Context)
@@ -124,6 +124,12 @@ func (s *smartController) Upload(ctx *gin.Context) {
 	file, err := ctx.FormFile("file")
 	storeName := ctx.Request.PostFormValue("storeName")
 	key := ctx.Request.PostFormValue("key")
+	metadataString := ctx.Request.PostFormValue("metadata")
+	var metadata map[string]string
+	if err = json.Unmarshal([]byte(metadataString), &metadata); err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
 		return
@@ -132,7 +138,7 @@ func (s *smartController) Upload(ctx *gin.Context) {
 		StoreName: storeName,
 		Key:       key,
 	}
-	response, err := s.service.UploadMultiPart(storageType, params, map[string]string{}, file)
+	response, err := s.service.UploadMultiPart(storageType, params, metadata, file)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, domain.ErrorResponse{Message: err.Error()})
 		return
@@ -141,8 +147,22 @@ func (s *smartController) Upload(ctx *gin.Context) {
 }
 
 func (s *smartController) PresignUploadLink(ctx *gin.Context) {
-	//TODO implement me
-	panic("implement me")
+	storageType := s.ExtractStorageType(ctx)
+	var body domain.PresignUploadRequest
+	if err := ctx.BindJSON(&body); err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	params := &domain.ObjectParams{
+		StoreName: body.StoreName,
+		Key:       body.Key,
+	}
+	url, err := s.service.PresignUploadLink(storageType, params, body.MimeType, body.Metadata, body.ExpirationTime)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, url)
 }
 
 func (s *smartController) Download(ctx *gin.Context) {
@@ -151,13 +171,25 @@ func (s *smartController) Download(ctx *gin.Context) {
 }
 
 func (s *smartController) PresignDownloadLink(ctx *gin.Context) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *smartController) PresignDownloadLinkWithDuration(ctx *gin.Context) {
-	//TODO implement me
-	panic("implement me")
+	storageType := s.ExtractStorageType(ctx)
+	storeName := ctx.Query("storeName")
+	key := ctx.Query("key")
+	expString := ctx.Query("exp")
+	params := &domain.ObjectParams{
+		StoreName: storeName,
+		Key:       key,
+	}
+	exp, err := strconv.ParseInt(expString, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	url, err := s.service.PresignDownloadLinkWithExpTime(storageType, params, uint(exp))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, url)
 }
 
 func (s *smartController) DeleteAll(ctx *gin.Context) {
@@ -166,13 +198,42 @@ func (s *smartController) DeleteAll(ctx *gin.Context) {
 }
 
 func (s *smartController) Delete(ctx *gin.Context) {
-	//TODO implement me
-	panic("implement me")
+	storageType := s.ExtractStorageType(ctx)
+	storeName := ctx.Query("storeName")
+	key := ctx.Query("key")
+	params := &domain.ObjectParams{
+		StoreName: storeName,
+		Key:       key,
+	}
+	objects, err := s.service.Delete(storageType, params)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, objects)
 }
 
 func (s *smartController) Copy(ctx *gin.Context) {
-	//TODO implement me
-	panic("implement me")
+	storageType := s.ExtractStorageType(ctx)
+	var body domain.ObjectMovementRequest
+	if err := ctx.BindJSON(&body); err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	current := &domain.ObjectParams{
+		StoreName: body.CurrentStoreName,
+		Key:       body.CurrentKey,
+	}
+	destination := &domain.ObjectParams{
+		StoreName: body.DestinationStoreName,
+		Key:       body.DestinationKey,
+	}
+	result, err := s.service.Copy(storageType, current, destination)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, result)
 }
 
 func (s *smartController) CopyAll(ctx *gin.Context) {
@@ -181,8 +242,26 @@ func (s *smartController) CopyAll(ctx *gin.Context) {
 }
 
 func (s *smartController) Move(ctx *gin.Context) {
-	//TODO implement me
-	panic("implement me")
+	storageType := s.ExtractStorageType(ctx)
+	var body domain.ObjectMovementRequest
+	if err := ctx.BindJSON(&body); err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	current := &domain.ObjectParams{
+		StoreName: body.CurrentStoreName,
+		Key:       body.CurrentKey,
+	}
+	destination := &domain.ObjectParams{
+		StoreName: body.DestinationStoreName,
+		Key:       body.DestinationKey,
+	}
+	result, err := s.service.Move(storageType, current, destination)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, result)
 }
 
 func (s *smartController) ExtractStorageType(ctx *gin.Context) domain.StorageType {

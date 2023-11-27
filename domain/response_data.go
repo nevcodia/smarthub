@@ -5,3 +5,7 @@ type DownloadFileResponse struct {
 	Type        string
 	Disposition string
 }
+
+type ErrorResponse struct {
+	Message string `json:"message"`
+}

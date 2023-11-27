@@ -2,24 +2,27 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/nevcodia/smarthub/domain"
 	"io"
 	"log"
 	"mime/multipart"
-	"net/url"
 	"strings"
 	"time"
 )
 
 type s3Repository struct {
-	client *s3.Client
+	client        *s3.Client
+	presignClient *s3.PresignClient
 }
 
 func NewS3Repository(client *s3.Client) domain.StorageRepository {
+	presignClient := s3.NewPresignClient(client)
 	return &s3Repository{
-		client: client,
+		client:        client,
+		presignClient: presignClient,
 	}
 }
 
@@ -44,7 +47,7 @@ func (s *s3Repository) Objects(storeName string, maxObjectsPerPage int32, reques
 		MaxKeys: &maxObjectsPerPage,
 	})
 	if err != nil {
-		log.Println(err)
+		log.Printf("Couldn't get objects from %v. Here's why: %v\n", storeName, err)
 		return nil, err
 	}
 	var storageObjects []domain.StorageObject
@@ -71,7 +74,7 @@ func (s *s3Repository) ObjectsWithMetadata(storeName string, maxObjectsPerPage i
 		MaxKeys: &maxObjectsPerPage,
 	})
 	if err != nil {
-		log.Println(err)
+		log.Printf("Couldn't get objects from %v. Here's why: %v\n", storeName, err)
 		return nil, err
 	}
 	var storageObjects []domain.StorageObject
@@ -101,7 +104,7 @@ func (s *s3Repository) GetObject(params *domain.ObjectParams) (domain.StorageObj
 		Key:    aws.String(params.Key),
 	})
 	if err != nil {
-		log.Println(err)
+		log.Printf("Couldn't get object %v:%v. Here's why: %v\n", params.StoreName, params.Key, err)
 		return domain.StorageObject{}, err
 	}
 	return domain.StorageObject{
@@ -146,9 +149,21 @@ func (s *s3Repository) Upload(params *domain.ObjectParams, metadata map[string]s
 	}, nil
 }
 
-func (s *s3Repository) PresignUploadLink(params *domain.ObjectParams, mimeType string, metadata map[string]string, duration uint) (url.URL, error) {
-	//TODO implement me
-	panic("implement me")
+func (s *s3Repository) PresignUploadLink(params *domain.ObjectParams, mimeType string, metadata map[string]string, exp uint) (string, error) {
+	request, err := s.presignClient.PresignPutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket:      aws.String(params.StoreName),
+		Key:         aws.String(params.Key),
+		Metadata:    metadata,
+		ContentType: &mimeType,
+	}, func(opts *s3.PresignOptions) {
+		opts.Expires = time.Duration(exp * uint(time.Millisecond))
+	})
+	if err != nil {
+		log.Printf("Couldn't get a presigned request to put %v:%v. Here's why: %v\n",
+			params.StoreName, params.Key, err)
+		return "", err
+	}
+	return request.URL, err
 }
 
 func (s *s3Repository) Download(params *domain.ObjectParams) (domain.DownloadFileResponse, error) {
@@ -156,14 +171,23 @@ func (s *s3Repository) Download(params *domain.ObjectParams) (domain.DownloadFil
 	panic("implement me")
 }
 
-func (s *s3Repository) PresignDownloadLink(params *domain.ObjectParams) (url.URL, error) {
-	//TODO implement me
-	panic("implement me")
+func (s *s3Repository) PresignDownloadLink(params *domain.ObjectParams) (string, error) {
+	return s.PresignDownloadLinkWithExpTime(params, 15*uint(time.Minute)) //Default time 15 minute
 }
 
-func (s *s3Repository) PresignDownloadLinkWithDuration(params *domain.ObjectParams, duration uint) (url.URL, error) {
-	//TODO implement me
-	panic("implement me")
+func (s *s3Repository) PresignDownloadLinkWithExpTime(params *domain.ObjectParams, exp uint) (string, error) {
+	request, err := s.presignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(params.StoreName),
+		Key:    aws.String(params.Key),
+	}, func(opts *s3.PresignOptions) {
+		opts.Expires = time.Duration(exp * uint(time.Millisecond))
+	})
+	if err != nil {
+		log.Printf("Couldn't get a presigned request to get %v:%v. Here's why: %v\n",
+			params.StoreName, params.Key, err)
+		return "", err
+	}
+	return request.URL, err
 }
 
 func (s *s3Repository) DeleteAll(storeName string, pathPrefix string) (bool, error) {
@@ -172,21 +196,51 @@ func (s *s3Repository) DeleteAll(storeName string, pathPrefix string) (bool, err
 }
 
 func (s *s3Repository) Delete(params *domain.ObjectParams) (bool, error) {
-	//TODO implement me
-	panic("implement me")
+	response, err := s.client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+		Bucket: aws.String(params.StoreName),
+		Key:    aws.String(params.Key),
+	})
+	if err != nil {
+		log.Printf("Couldn't delete %v:%v. Here's why: %v\n",
+			params.StoreName, params.Key, err)
+		return false, err
+	}
+	return *response.DeleteMarker, nil
 }
 
 func (s *s3Repository) Copy(current *domain.ObjectParams, destination *domain.ObjectParams) (domain.StorageObject, error) {
-	//TODO implement me
-	panic("implement me")
+	_, err := s.client.CopyObject(context.TODO(), &s3.CopyObjectInput{
+		Bucket:     aws.String(destination.StoreName),
+		Key:        aws.String(destination.Key),
+		CopySource: aws.String(fmt.Sprintf("%v/%v", current.StoreName, strings.TrimLeft(current.Key, "/"))),
+	})
+	if err != nil {
+		log.Printf("Couldn't copy object from %v:%v to %v:%v. Here's why: %v\n",
+			current.StoreName, current.Key, destination.StoreName, destination.Key, err)
+		return domain.StorageObject{}, err
+	}
+	return domain.StorageObject{
+		StoreName:    destination.StoreName,
+		Key:          destination.Key,
+		LastModified: time.Now().UnixMilli(),
+	}, nil
 }
 
 func (s *s3Repository) CopyAll(sourceStoreName string, sourcePath string, targetStoreName string, targetPath string) ([]domain.StorageObject, error) {
-	//TODO implement me
 	panic("implement me")
 }
 
 func (s *s3Repository) Move(current *domain.ObjectParams, destination *domain.ObjectParams) (domain.StorageObject, error) {
-	//TODO implement me
-	panic("implement me")
+	_, err := s.Copy(current, destination)
+	_, err = s.Delete(current)
+	if err != nil {
+		log.Printf("Couldn't move object from %v:%v to %v:%v. Here's why: %v\n",
+			current.StoreName, current.Key, destination.StoreName, destination.Key, err)
+		return domain.StorageObject{}, err
+	}
+	return domain.StorageObject{
+		StoreName:    destination.StoreName,
+		Key:          destination.Key,
+		LastModified: time.Now().UnixMilli(),
+	}, nil
 }

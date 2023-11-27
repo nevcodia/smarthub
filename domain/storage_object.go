@@ -3,7 +3,6 @@ package domain
 import (
 	"io"
 	"mime/multipart"
-	"net/url"
 )
 
 type StorageObject struct {
@@ -22,10 +21,10 @@ type StorageRepository interface {
 	GetObject(params *ObjectParams) (StorageObject, error)
 	Upload(params *ObjectParams, metadata map[string]string, file io.Reader) (StorageObject, error)
 	UploadMultiPart(params *ObjectParams, metadata map[string]string, fileHeader *multipart.FileHeader) (StorageObject, error)
-	PresignUploadLink(params *ObjectParams, mimeType string, metadata map[string]string, duration uint) (url.URL, error)
+	PresignUploadLink(params *ObjectParams, mimeType string, metadata map[string]string, exp uint) (string, error)
 	Download(params *ObjectParams) (DownloadFileResponse, error)
-	PresignDownloadLink(params *ObjectParams) (url.URL, error)
-	PresignDownloadLinkWithDuration(params *ObjectParams, duration uint) (url.URL, error)
+	PresignDownloadLink(params *ObjectParams) (string, error)
+	PresignDownloadLinkWithExpTime(params *ObjectParams, exp uint) (string, error)
 	DeleteAll(storeName string, pathPrefix string) (bool, error)
 	Delete(params *ObjectParams) (bool, error)
 	Copy(current *ObjectParams, destination *ObjectParams) (StorageObject, error)

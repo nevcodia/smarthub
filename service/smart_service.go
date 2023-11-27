@@ -6,7 +6,7 @@ import (
 	"github.com/nevcodia/smarthub/domain"
 	"io"
 	"mime/multipart"
-	"net/url"
+	"strings"
 )
 
 type SmartService interface {
@@ -16,10 +16,10 @@ type SmartService interface {
 	GetObject(storeType domain.StorageType, params *domain.ObjectParams) (domain.StorageObject, error)
 	UploadMultiPart(storeType domain.StorageType, params *domain.ObjectParams, metadata map[string]string, fileHeader *multipart.FileHeader) (domain.StorageObject, error)
 	Upload(storeType domain.StorageType, params *domain.ObjectParams, metadata map[string]string, file io.Reader) (domain.StorageObject, error)
-	PresignUploadLink(storeType domain.StorageType, params *domain.ObjectParams, mimeType string, metadata map[string]string, duration uint) (url.URL, error)
+	PresignUploadLink(storeType domain.StorageType, params *domain.ObjectParams, mimeType string, metadata map[string]string, exp uint) (string, error)
 	Download(storeType domain.StorageType, params *domain.ObjectParams) (domain.DownloadFileResponse, error)
-	PresignDownloadLink(storeType domain.StorageType, params *domain.ObjectParams) (url.URL, error)
-	PresignDownloadLinkWithDuration(storeType domain.StorageType, params *domain.ObjectParams, duration uint) (url.URL, error)
+	PresignDownloadLink(storeType domain.StorageType, params *domain.ObjectParams) (string, error)
+	PresignDownloadLinkWithExpTime(storeType domain.StorageType, params *domain.ObjectParams, exp uint) (string, error)
 	DeleteAll(storeType domain.StorageType, storeName string, pathPrefix string) (bool, error)
 	Delete(storeType domain.StorageType, params *domain.ObjectParams) (bool, error)
 	Copy(storeType domain.StorageType, current *domain.ObjectParams, destination *domain.ObjectParams) (domain.StorageObject, error)
@@ -74,6 +74,9 @@ func (s *smartService) UploadMultiPart(storeType domain.StorageType, params *dom
 	if err != nil {
 		return domain.StorageObject{}, err
 	}
+	if metadata == nil {
+		metadata = map[string]string{}
+	}
 	return repository.UploadMultiPart(params, metadata, fileHeader)
 }
 
@@ -82,15 +85,28 @@ func (s *smartService) Upload(storeType domain.StorageType, params *domain.Objec
 	if err != nil {
 		return domain.StorageObject{}, err
 	}
+	if metadata == nil {
+		metadata = map[string]string{}
+	}
 	return repository.Upload(params, metadata, file)
 }
 
-func (s *smartService) PresignUploadLink(storeType domain.StorageType, params *domain.ObjectParams, mimeType string, metadata map[string]string, duration uint) (url.URL, error) {
+func (s *smartService) PresignUploadLink(storeType domain.StorageType, params *domain.ObjectParams, mimeType string, metadata map[string]string, exp uint) (string, error) {
 	repository, err := s.GetRepository(storeType)
 	if err != nil {
-		return url.URL{}, err
+		return "", err
 	}
-	return repository.PresignUploadLink(params, mimeType, metadata, duration)
+	if exp == 0 {
+		exp = 900000 //15 minutes
+	}
+	mimeType = strings.TrimSpace(mimeType)
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+	if metadata == nil {
+		metadata = map[string]string{}
+	}
+	return repository.PresignUploadLink(params, mimeType, metadata, exp)
 }
 
 func (s *smartService) Download(storeType domain.StorageType, params *domain.ObjectParams) (domain.DownloadFileResponse, error) {
@@ -101,20 +117,23 @@ func (s *smartService) Download(storeType domain.StorageType, params *domain.Obj
 	return repository.Download(params)
 }
 
-func (s *smartService) PresignDownloadLink(storeType domain.StorageType, params *domain.ObjectParams) (url.URL, error) {
+func (s *smartService) PresignDownloadLink(storeType domain.StorageType, params *domain.ObjectParams) (string, error) {
 	repository, err := s.GetRepository(storeType)
 	if err != nil {
-		return url.URL{}, err
+		return "", err
 	}
 	return repository.PresignDownloadLink(params)
 }
 
-func (s *smartService) PresignDownloadLinkWithDuration(storeType domain.StorageType, params *domain.ObjectParams, duration uint) (url.URL, error) {
+func (s *smartService) PresignDownloadLinkWithExpTime(storeType domain.StorageType, params *domain.ObjectParams, exp uint) (string, error) {
 	repository, err := s.GetRepository(storeType)
 	if err != nil {
-		return url.URL{}, err
+		return "", err
 	}
-	return repository.PresignDownloadLinkWithDuration(params, duration)
+	if exp == 0 {
+		exp = 900000 //15 minutes
+	}
+	return repository.PresignDownloadLinkWithExpTime(params, exp)
 }
 
 func (s *smartService) DeleteAll(storeType domain.StorageType, storeName string, pathPrefix string) (bool, error) {
