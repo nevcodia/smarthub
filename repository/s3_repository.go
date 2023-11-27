@@ -9,6 +9,8 @@ import (
 	"io"
 	"log"
 	"mime/multipart"
+	"os"
+	"path"
 	"strings"
 	"time"
 )
@@ -167,8 +169,31 @@ func (s *s3Repository) PresignUploadLink(params *domain.ObjectParams, mimeType s
 }
 
 func (s *s3Repository) Download(params *domain.ObjectParams) (domain.DownloadFileResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	result, err := s.client.GetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(params.StoreName),
+		Key:    aws.String(params.Key),
+	})
+	filename := path.Base(params.Key)
+	if err != nil {
+		log.Printf("Couldn't get object %v:%v. Here's why: %v\n", params.StoreName, params.Key, err)
+		return domain.DownloadFileResponse{}, err
+	}
+	defer result.Body.Close()
+	file, err := os.Create(filename)
+	if err != nil {
+		log.Printf("Couldn't create file %v. Here's why: %v\n", filename, err)
+		return domain.DownloadFileResponse{}, err
+	}
+	defer file.Close()
+	_, err = io.Copy(file, result.Body)
+	if err != nil {
+		log.Printf("Couldn't read object body from %v. Here's why: %v\n", params.Key, err)
+	}
+	return domain.DownloadFileResponse{
+		Filename:    filename,
+		Type:        *result.ContentType,
+		Disposition: "inline;filename=" + filename,
+	}, err
 }
 
 func (s *s3Repository) PresignDownloadLink(params *domain.ObjectParams) (string, error) {

@@ -1,7 +1,7 @@
 package domain
 
 type DownloadFileResponse struct {
-	Content     []byte
+	Filename    string
 	Type        string
 	Disposition string
 }

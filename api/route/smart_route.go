@@ -31,6 +31,6 @@ func NewSmartRouter(client *s3.Client, group *gin.RouterGroup) {
 	group.POST("/:type/upload-link", smartController.PresignUploadLink)
 	//group.POST("/:type/upload-link", smartController.PresignUploadLinkWithMetadata)
 	group.GET("/:type/download-link", smartController.PresignDownloadLink)
-	group.GET("/:type/download", smartController.Download)
+	group.GET("/:type/download", smartController.Download) //Use presigned download link for larger files
 
 }

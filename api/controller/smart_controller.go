@@ -6,6 +6,7 @@ import (
 	"github.com/nevcodia/smarthub/domain"
 	"github.com/nevcodia/smarthub/service"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -166,8 +167,22 @@ func (s *smartController) PresignUploadLink(ctx *gin.Context) {
 }
 
 func (s *smartController) Download(ctx *gin.Context) {
-	//TODO implement me
-	panic("implement me")
+	storageType := s.ExtractStorageType(ctx)
+	storeName := ctx.Query("storeName")
+	key := ctx.Query("key")
+	params := &domain.ObjectParams{
+		StoreName: storeName,
+		Key:       key,
+	}
+	result, err := s.service.Download(storageType, params)
+	defer os.Remove(result.Filename)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, domain.ErrorResponse{Message: err.Error()})
+		return
+	}
+	ctx.Writer.Header().Set("Content-Type", result.Type)
+	ctx.Writer.Header().Set("Content-Disposition", result.Disposition)
+	ctx.File(result.Filename)
 }
 
 func (s *smartController) PresignDownloadLink(ctx *gin.Context) {
